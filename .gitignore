@@ -1,0 +1,7 @@
+yarn.lock
+node_modules
+package-lock.json
+.git_bitbucket
+.bb_git_bitbucket
+.git_heroku
+yarn-error.log

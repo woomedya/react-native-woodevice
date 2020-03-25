@@ -1,8 +1,10 @@
 import opts from './config';
-import * as wooDeviceRepo from './libs/repositories/woodevice';
-import * as request from './libs/request';
-import { dateValidate } from './libs/utilities/date';
-import * as device from './libs/device';
+import * as wooDeviceRepo from './src/repositories/woodevice';
+import * as request from './src/apis/request';
+import { dateValidate } from 'woo-utilities/date';
+import * as device from './src/utilities/device';
+
+var wooDeviceData = null;
 
 export const config = async ({
     wooIYSUrl, onChange, publicKey, privateKey, tokenTimeout
@@ -13,108 +15,93 @@ export const config = async ({
     opts.privateKey = privateKey;
     opts.tokenTimeout = tokenTimeout;
 
-    postWooDevice();
+    initial();
 }
 
 export const insertPurchase = async ({
     keys
 }) => {
-    let wooDeviceData = await wooDeviceRepo.get();
+    await initVariables();
 
     let oldValidateKeys = keys.filter(key => {
-        let purchase = wooDeviceData.purchase.filter(x => x.key == key).sort((x, y) => x.date > y.date ? -1 : 1)[0];
+        let lastPurchase = wooDeviceData.purchase
+            .filter(x => x.key == key)
+            .sort((x, y) => x.date > y.date ? -1 : 1)[0];
 
-        return purchase && wooDeviceData.keyInfo[key] && dateValidate(purchase.date, wooDeviceData.keyInfo[key].subscriptionPeriod)
+        return lastPurchase
+            && wooDeviceData.keyInfo[key]
+            && dateValidate(lastPurchase.date, wooDeviceData.keyInfo[key].subscriptionPeriod);
     });
 
     if (oldValidateKeys.length != keys.length) {
-        await getIYSContent({ keys });
-        await getKeyInfo({ keys });
-    }
+        wooDeviceData.keyInfo = await getKeyInfo();
 
-    let deviceContentData = await wooDeviceRepo.get();
-
-    if (oldValidateKeys.length != keys.length) {
         var notExistKeys = keys.filter(x => oldValidateKeys.indexOf(x) == -1);
         notExistKeys.forEach(key => {
-            deviceContentData.purchase.push({
+            wooDeviceData.purchase.push({
                 key,
                 date: new Date().toISOString()
             });
         });
 
-        await wooDeviceRepo.set(deviceContentData)
+        var iysContent = request.insertPurchase({
+            purchase: wooDeviceData.purchase,
+            device: wooDeviceData.device,
+            os: wooDeviceData.os
+        });
+
+        if (iysContent) {
+            wooDeviceData.date = new Date().toISOString();
+            wooDeviceData.iysContent = iysContent;
+        }
+
+        await wooDeviceRepo.set(wooDeviceData);
+
+        if (opts.onChange)
+            opts.onChange(wooDeviceData.iysContent);
+    }
+}
+
+const getKeyInfo = async () => {
+    return await request.getKeyInfo({
+        os: wooDeviceData.os
+    });
+}
+
+const initial = async () => {
+    await initVariables();
+    var changed = false;
+
+    if (!wooDeviceData.device) {
+        wooDeviceData.device = await device.getDeviceId();
+        changed = true;
     }
 
-    if (opts.onChange)
-        opts.onChange(deviceContentData)
+    if (!wooDeviceData.os) {
+        wooDeviceData.os = device.getDeviceOS();
+        changed = true;
+    }
 
-    if (oldValidateKeys.length != keys.length)
-        request.insertPurchase({
-            iysContent: deviceContentData.iysContent,
-            purchases: deviceContentData.purchase,
-            device: deviceContentData.device,
-            os: deviceContentData.os
-        });
-}
-
-export const getIYSContent = async ({ keys }) => {
-    let deviceContent = await wooDeviceRepo.get();
-
-    let iysContent = await request.getWooDeviceContent({
-        keys,
-        device: deviceContent.device,
-        os: deviceContent.os
-    });
-
-    deviceContent.iysContent = iysContent;
-    deviceContent.date = new Date().toISOString();
-
-    await wooDeviceRepo.set(deviceContent);
-
-    if (opts.onChange)
-        opts.onChange(deviceContent);
-
-    return deviceContent;
-}
-
-const getKeyInfo = async ({ keys }) => {
-    let deviceContent = await wooDeviceRepo.get();
-
-    let infoContent = await request.getKeyInfo({
-        keys,
-        device: deviceContent.device,
-        os: deviceContent.os
-    });
-
-    deviceContent.keyInfo = infoContent;
-    deviceContent.date = new Date().toISOString();
-
-    await wooDeviceRepo.set(deviceContent);
-
-    if (opts.onChange)
-        opts.onChange(deviceContent);
-
-    return deviceContent;
-}
-
-const postWooDevice = async () => {
-    let date = new Date();
-
-    let wooDeviceData = await wooDeviceRepo.get();
-    wooDeviceData.device = await device.getDeviceId();
-    wooDeviceData.os = device.getDeviceOS();
-
-    let result = await request.insertPurchase({
+    var iysContent = await request.insertPurchase({
         device: wooDeviceData.device,
         os: wooDeviceData.os
     });
 
-    if (result)
-        wooDeviceData.date = date;
+    if (iysContent) {
+        wooDeviceData.date = new Date().toISOString();
+        wooDeviceData.iysContent = iysContent;
+        changed = true;
+    }
 
-    await wooDeviceRepo.set(wooDeviceData);
+    if (changed)
+        wooDeviceRepo.set(wooDeviceData);
 
+    // uygulama ilk açılışta olduğu için burası değişiklik olmasa da çalışacak
     if (opts.onChange)
-        opts.onChange(wooDeviceData);
+        opts.onChange(wooDeviceData.iysContent);
+}
+
+const initVariables = async () => {
+    if (wooDeviceData == null)
+        wooDeviceData = await wooDeviceRepo.get();
 }

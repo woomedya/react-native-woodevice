@@ -1,10 +1,9 @@
 import Crypto from 'woo-crypto';
-import { getUTCTime } from './utilities/date';
+import { getUTCTime } from 'woo-utilities/date';
 import Axios from "axios";
-import options from "../config";
+import options from "../../config";
 
 const url = {
-    content: '/woodevice/content',
     keyInfo: '/woodevice/keyinfo',
     insert: '/woodevice/insert'
 }
@@ -18,23 +17,6 @@ const post = async (baseURL, url, headers, data) => {
     var responseJson = await instance.post(url, data);
 
     return responseJson.data
-}
-
-export const getWooDeviceContent = async (obj) => {
-    try {
-        var type = 'woodevice.content';
-        var token = (Crypto.encrypt(JSON.stringify({ expire: getUTCTime(options.tokenTimeout).toString(), type }), options.publicKey, options.privateKey));
-        var result = await post(options.wooIYSUrl, url.content, {
-            public: options.publicKey,
-            token
-        }, {
-            ...obj
-        });
-
-        return result.data;
-    } catch (error) {
-        return null
-    }
 }
 
 export const getKeyInfo = async (obj) => {
@@ -65,7 +47,7 @@ export const insertPurchase = async (obj) => {
             ...obj
         });
 
-        return result.status;
+        return result.data;
     } catch (error) {
         return null
     }
