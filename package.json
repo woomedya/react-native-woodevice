@@ -1,6 +1,6 @@
 {
   "name": "react-native-woodevice",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -21,6 +21,6 @@
     "moment": "^2.24.0",
     "react-native-device-info": "^5.5.3",
     "woo-crypto": "^1.0.1",
-    "woo-utilities": "^1.0.3"
+    "woo-utilities": "^1.0.8"
   }
 }
