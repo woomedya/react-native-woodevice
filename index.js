@@ -21,6 +21,7 @@ export const config = async ({
 export const insertPurchase = async ({
     keys
 }) => {
+    keys = keys || [];
     await initVariables();
 
     let oldValidateKeys = keys.filter(key => {
