@@ -45,7 +45,7 @@ export const insertPurchase = async ({
             });
         });
 
-        var iysContent = request.insertPurchase({
+        var iysContent = await request.insertPurchase({
             purchase: wooDeviceData.purchase,
             device: wooDeviceData.device,
             os: wooDeviceData.os
@@ -84,6 +84,7 @@ const initial = async () => {
     }
 
     var iysContent = await request.insertPurchase({
+        purchase: wooDeviceData.purchase,
         device: wooDeviceData.device,
         os: wooDeviceData.os
     });
