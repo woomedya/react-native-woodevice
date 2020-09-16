@@ -59,8 +59,15 @@ export const insertPurchase = async ({
         await wooDeviceRepo.set(wooDeviceData);
 
         if (opts.onChange)
-            opts.onChange(wooDeviceData.iysContent);
+            opts.onChange(wooDeviceData.iysContent, wooDeviceData.purchase);
     }
+}
+
+export const getDeviceId = async () => {
+    if (wooDeviceData == null)
+        await initial();
+
+    return wooDeviceData.device;
 }
 
 const getKeyInfo = async () => {
@@ -95,15 +102,25 @@ const initial = async () => {
         changed = true;
     }
 
+    let filteredPurchases = (wooDeviceData.purchase || []).filter(p => {
+        return dateValidate(p.date, wooDeviceData.keyInfo[p.key].subscriptionPeriod);
+    })
+
+    if (filteredPurchases.length != (wooDeviceData.purchase || []).length) {
+        wooDeviceData.purchase = filteredPurchases;
+        changed = true;
+    }
+
     if (changed)
         wooDeviceRepo.set(wooDeviceData);
 
     // uygulama ilk açılışta olduğu için burası değişiklik olmasa da çalışacak
     if (opts.onChange)
-        opts.onChange(wooDeviceData.iysContent);
+        opts.onChange(wooDeviceData.iysContent, wooDeviceData.purchase);
 }
 
 const initVariables = async () => {
     if (wooDeviceData == null)
         wooDeviceData = await wooDeviceRepo.get();
 }
+
