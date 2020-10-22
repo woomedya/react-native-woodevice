@@ -103,8 +103,8 @@ const initial = async () => {
     }
 
     let filteredPurchases = (wooDeviceData.purchase || []).filter(p => {
-        return dateValidate(p.date, wooDeviceData.keyInfo[p.key].subscriptionPeriod);
-    })
+        return dateValidate(p.date, wooDeviceData.keyInfo[p.key] && wooDeviceData.keyInfo[p.key].subscriptionPeriod);
+    });
 
     if (filteredPurchases.length != (wooDeviceData.purchase || []).length) {
         wooDeviceData.purchase = filteredPurchases;
